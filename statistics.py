@@ -3,16 +3,21 @@ statistics.py
 print out all data statistics
 '''
 
+import argparse
+from collections import Counter
 from zipfile import ZipFile
 
-from collections import Counter
 import numpy as np
 
 from dataset import Dataset
 
+argparser = argparse.ArgumentParser()
+argparser.add_argument('-c', '--clean', default=False, action='store_true',
+                       help='Do data cleaning')
+
 if __name__ == '__main__':
   zf = ZipFile('hw3_dataset.zip', 'r')
-  dataset = Dataset(zf.read('train.csv'))
+  dataset = Dataset(zf.read('train.csv').decode('utf-8'), do_cleaning=argparser.parse_args().clean)
   print('Number of sentences: %d'%(len(dataset.data)))
   print('Number of words: %d'%(sum(dataset.word_counter.values())))
   print('Number of unique words: %d(w/ min freq) %d(w/o min freq)'

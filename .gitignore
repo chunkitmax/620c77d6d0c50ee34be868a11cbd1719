@@ -104,3 +104,4 @@ ENV/
 __pycache__
 *.zip
 *_list
+*_log*
