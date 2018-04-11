@@ -5,15 +5,16 @@ train model
 
 import gzip
 import sys
+from collections import deque
 from zipfile import ZipFile
 
 import numpy as np
 import torch as T
+from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
-from collections import deque
-from dataset import Dataset
 
+from dataset import Dataset
 from log import Logger
 from neuralnet import NeuralNet
 
@@ -34,6 +35,19 @@ class Train:
     self.counter = 0
   def train(self):
     if self.train_BOW:
+      lr = [0.01, 0.001, 0.0001]
+      drop_rate = [0.1, 0.3, 0.5]
+      hidden_size = [128, 256, 512]
+      num_hidden_layer = [1, 2, 3]
+      for i in range(3):
+        train_data_loader, valid_data_loader,\
+        vocab_size, max_len, num_class = self._get_data_loader()
+        tmp_net = NeuralNet(self.embedding_len, vocab_size, num_class,
+                            max_len, num_hidden_layer[i], drop_rate[i],
+                            fc_dim=[hidden_size[i]], lr=lr[i], momentum=0.,
+                            use_cuda=self.use_cuda)
+        self._train(tmp_net, train_data_loader, valid_data_loader, 'BOW_'+str(i))
+    else:
       lr = [0.01, 0.001, 0.0001]
       drop_rate = [0.1, 0.3, 0.5]
       hidden_size = [128, 256, 512]
@@ -69,6 +83,7 @@ class Train:
     try:
       total_batch_per_epoch = len(train_data_loader)
       loss_history = deque(maxlen=self.early_stopping_history_len)
+      max_fscore = 0.
       epoch_index = 0
       for epoch_index in range(self.max_epoch):
         losses = 0.
@@ -96,7 +111,9 @@ class Train:
                          losses / counter, acc / counter))
         mean_loss = losses / counter
         valid_losses = 0.
-        valid_acc = 0.
+        valid_prec = 0.
+        valid_recall = 0.
+        valid_fscore = 0.
         valid_step = 0
         net.eval()
         for valid_step, (data, label) in enumerate(valid_data_loader):
@@ -106,26 +123,44 @@ class Train:
             data = data.cuda()
             label = label.cuda()
           output, predicted = net(data)
-          valid_acc += (label.squeeze() == predicted).float().mean().data
+          prec, recall, fscore, _ = precision_recall_fscore_support(label, output,
+                                                                    average='weighted')
+          valid_prec += prec
+          valid_recall += recall
+          valid_fscore += fscore
           valid_losses += loss_fn(output, label.view(-1)).data.cpu()[0]
         mean_val_loss = valid_losses/(valid_step+1)
-        self.logger.d(' -- val_loss: %.4f, val_acc: %.4f'%
-                      (mean_val_loss, valid_acc/(valid_step+1)), reset_cursor=False)
+        mean_fscore = valid_fscore/(valid_step+1)
+        self.logger.d(' -- val_loss: %.4f, prec: %.4f, rec: %.4f, fscr: %.4f'%
+                      (mean_val_loss, valid_prec/(valid_step+1),
+                       valid_recall/(valid_step+1), mean_fscore),
+                       reset_cursor=False)
         if self.use_tensorboard:
           self.writer.add_scalar('train_loss', mean_loss, epoch_index)
           self.writer.add_scalar('train_acc', acc / counter, epoch_index)
           self.writer.add_scalar('val_loss', mean_val_loss, epoch_index)
-          self.writer.add_scalar('val_acc', valid_acc/(valid_step+1), epoch_index)
+          self.writer.add_scalar('val_fscr', mean_fscore, epoch_index)
         loss_history.append(mean_val_loss)
         if mean_val_loss > np.mean(loss_history):
           self.logger.i('Early stopping...', True)
           break
+        if mean_fscore > max_fscore:
+          self._save(epoch_index, net, loss_history, mean_fscore, identity)
+          max_fscore = mean_fscore
         self.logger.d('', True, False)
     except KeyboardInterrupt:
       self.logger.i('\n\nInterrupted', True)
     if self.use_tensorboard:
       self.writer.close()
     self.logger.i('Finish', True)
+  def _save(self, global_step, net, loss_history, best_fscore, identity):
+    T.save({
+      'epoch': global_step+1,
+      'state_dict': net.state_dict(),
+      'loss_history': loss_history,
+      'best_fscore': best_fscore,
+      'optimizer': net.optimizer.state_dict()
+    }, identity+'_best')
 
 if __name__ == '__main__':
   trainer = Train(use_cuda=True, use_tensorboard=True)
