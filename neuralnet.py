@@ -52,11 +52,11 @@ class NeuralNet(T.nn.Module):
     self.Fc = []
     self.Dropout = []
     for i in range(len(self.fc_dim) - 1):
-      if i > 0 and i + 1 < len(self.fc_dim):
-        self.Dropout.append(T.nn.Dropout(self.drop_rate))
       tmp_layer = T.nn.Linear(self.fc_dim[i], self.fc_dim[i+1], bias=(i == 0))
       tmp_layer.apply(init_weight)
       self.Fc.append(tmp_layer)
+      if i < len(self.fc_dim) - 2:
+        self.Dropout.append(T.nn.Dropout(self.drop_rate))
     # Loss
     self.Loss_fn = T.nn.CrossEntropyLoss()
 
@@ -77,11 +77,11 @@ class NeuralNet(T.nn.Module):
     # output = output.view([batch_size, -1])
     output = output.mean(dim=1)
     for i in range(len(self.fc_dim) - 1):
-      if i > 0 and i + 1 < len(self.fc_dim):
-        output = self.Dropout[i-1](output)
       output = self.Fc[i](output)
       if i < len(self.activation_fn):
         output = self.activation_fn[i](output)
+      if i < len(self.Dropout):
+        output = self.Dropout[i](output)
     _, max_indice = T.max(output, dim=1)
     return output, max_indice
   def get_loss_fn(self):

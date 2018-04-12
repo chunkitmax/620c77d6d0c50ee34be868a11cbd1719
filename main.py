@@ -8,6 +8,8 @@ parser.add_argument('-emb', '--emb_len', default=300, type=int,
                     help='Embedding length')
 parser.add_argument('-esh', '--early_stop_history', default=100, type=int,
                     help='Number of epochs for determining early stopping')
+parser.add_argument('-esa', '--early_stop_allowance', default=5, type=int,
+                    help='Number of violation allowance for determining early stopping')
 parser.add_argument('-s', '--save', default=False, action='store_true',
                     help='Save, best f1score state will be saved')
 parser.add_argument('-v', '--verbose', default=1, type=int, help='Verbose level')
@@ -32,7 +34,7 @@ def main():
     trainer = Train(train_BOW=True, max_epoch=Args.max_epoch, embedding_len=Args.emb_len,
                     early_stopping_history_len=Args.early_stop_history, use_cuda=Args.gpu,
                     use_tensorboard=Args.tensorboard, verbose=Args.verbose,
-                    save_best_model=Args.save)
+                    early_stopping_allowance=Args.early_stop_allowance, save_best_model=Args.save)
     trainer.train()
   else:
     parser.print_help()

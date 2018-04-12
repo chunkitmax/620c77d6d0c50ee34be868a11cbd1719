@@ -23,8 +23,8 @@ from neuralnet import NeuralNet
 class Train:
   def __init__(self, train_BOW=True, max_epoch=5000, target_file='hw3_dataset.zip',
                batch_size=100, embedding_len=300, use_cuda=False,
-               use_tensorboard=False, early_stopping_history_len=100, verbose=1,
-               save_best_model=False):
+               use_tensorboard=False, early_stopping_history_len=100, 
+               early_stopping_allowance = 5, verbose=1, save_best_model=False):
     self.logger = Logger(verbose_level=verbose)
     self.train_BOW = train_BOW
     self.max_epoch = max_epoch
@@ -34,6 +34,7 @@ class Train:
     self.use_cuda = use_cuda
     self.use_tensorboard = use_tensorboard
     self.early_stopping_history_len = early_stopping_history_len
+    self.early_stopping_allowance = early_stopping_allowance
     self.save_best_model = save_best_model
     self.counter = 0
   def train(self):
@@ -89,6 +90,7 @@ class Train:
       total_batch_per_epoch = len(train_data_loader)
       loss_history = deque(maxlen=self.early_stopping_history_len)
       max_fscore = 0.
+      early_stopping_violate_counter = 0
       epoch_index = 0
       for epoch_index in range(self.max_epoch):
         losses = 0.
@@ -149,8 +151,12 @@ class Train:
           self.writer.add_scalar('val_fscr', mean_fscore, epoch_index)
         loss_history.append(mean_val_loss)
         if mean_val_loss > np.mean(loss_history):
-          self.logger.i('Early stopping...', True)
-          break
+          early_stopping_violate_counter += 1
+          if early_stopping_violate_counter >= self.early_stopping_allowance:
+            self.logger.i('Early stopping...', True)
+            break
+        else:
+          early_stopping_violate_counter = 0
         if self.save_best_model and mean_fscore > max_fscore:
           self._save(epoch_index, net, loss_history, mean_fscore, identity)
           max_fscore = mean_fscore
