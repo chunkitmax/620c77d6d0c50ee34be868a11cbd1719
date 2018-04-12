@@ -14,16 +14,17 @@ from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
+from convnet import ConvNet
 from dataset import Dataset
 from log import Logger
 from neuralnet import NeuralNet
-from convnet import ConvNet
 
 
 class Train:
-  def __init__(self, train_BOW=True, max_epoch=5000, target_file='hw3_dataset.zip', batch_size=50,
-               embedding_len=300, use_cuda=False, use_tensorboard=False,
-               early_stopping_history_len=100, verbose=1):
+  def __init__(self, train_BOW=True, max_epoch=5000, target_file='hw3_dataset.zip',
+               batch_size=100, embedding_len=300, use_cuda=False,
+               use_tensorboard=False, early_stopping_history_len=100, verbose=1,
+               save_best_model=False):
     self.logger = Logger(verbose_level=verbose)
     self.train_BOW = train_BOW
     self.max_epoch = max_epoch
@@ -33,6 +34,7 @@ class Train:
     self.use_cuda = use_cuda
     self.use_tensorboard = use_tensorboard
     self.early_stopping_history_len = early_stopping_history_len
+    self.save_best_model = save_best_model
     self.counter = 0
   def train(self):
     if self.train_BOW:
@@ -149,7 +151,7 @@ class Train:
         if mean_val_loss > np.mean(loss_history):
           self.logger.i('Early stopping...', True)
           break
-        if mean_fscore > max_fscore:
+        if self.save_best_model and mean_fscore > max_fscore:
           self._save(epoch_index, net, loss_history, mean_fscore, identity)
           max_fscore = mean_fscore
         self.logger.d('', True, False)

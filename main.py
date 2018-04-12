@@ -1,16 +1,41 @@
-from CBOW import CBOW
+from train import Train
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-me', '--max_epoch', default=5000, type=int,
+                    help='Max epochs the network goes')
+parser.add_argument('-emb', '--emb_len', default=300, type=int,
+                    help='Embedding length')
+parser.add_argument('-esh', '--early_stop_history', default=100, type=int,
+                    help='Number of epochs for determining early stopping')
+parser.add_argument('-s', '--save', default=False, action='store_true',
+                    help='Save, best f1score state will be saved')
+parser.add_argument('-v', '--verbose', default=1, type=int, help='Verbose level')
+parser.add_argument('-BOW', '--BagOfWord', default=False, action='store_true',
+                    help='Train Bag of Word NN model')
+parser.add_argument('-CNN', '--ConvNet', default=False, action='store_true',
+                    help='Train Covolutional NN model')
+parser.add_argument('-tb', '--tensorboard', default=False, action='store_true',
+                    help='Log with TensorBoard')
+parser.add_argument('-g', '--gpu', default=False, action='store_true',
+                    help='Train with GPU support')
+
+Args = parser.parse_args()
 
 def main():
-  learning_rate = [1., .1, 1., .1, 0.1]
-  momentum = [.9, .9, .5, .5, .5]
-  window_size = [2, 2, 2, 2, 3]
-  name_list = ['_o_1_9_300_100_2', '_o_01_9_300_100_2', '_o_1_5_300_100_2',
-               '_o_01_5_300_100_2', '_o_01_5_300_100_3']
-  for index, name in enumerate(name_list):
-    model = CBOW(300, lr=learning_rate[index], momentum=momentum[index], epoch=5000,
-                 batch_size=100, window_size=window_size[index], use_cuda=True,
-                 embedding_path='w_emb_mat'+name, verbose=0, tensorboard=True,
-                 wordlist_path='word_list.txt', log_folder='runs'+name)
-    model.fit()
+  mode = None
+  if Args.BagOfWord:
+    mode = True
+  elif Args.ConvNet:
+    mode = False
+  if mode is not None:
+    trainer = Train(train_BOW=True, max_epoch=Args.max_epoch, embedding_len=Args.emb_len,
+                    early_stopping_history_len=Args.early_stop_history, use_cuda=Args.gpu,
+                    use_tensorboard=Args.tensorboard, verbose=Args.verbose,
+                    save_best_model=Args.save)
+    trainer.train()
+  else:
+    parser.print_help()
+
 if __name__ == '__main__':
   main()
