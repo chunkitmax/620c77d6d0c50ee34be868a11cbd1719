@@ -10,7 +10,7 @@ import torch as T
 
 
 class NeuralNet(T.nn.Module):
-  def __init__(self, embedding_len, num_vocab, num_class, max_len, num_hidden_layer=1,
+  def __init__(self, embedding_len, num_vocab, num_class, doc_len, num_hidden_layer=1,
                drop_rate=0.5, fc_dim=[2], activation_fn=[T.nn.functional.tanh],
                lr=.01, momentum=.9, use_cuda=False):
     super(NeuralNet, self).__init__()
@@ -18,16 +18,17 @@ class NeuralNet(T.nn.Module):
     self.embedding_len = embedding_len
     self.num_vocab = num_vocab
     self.num_class = num_class
-    self.max_len = max_len
     self.num_hidden_layer = num_hidden_layer
     self.drop_rate = drop_rate
     if len(fc_dim) < self.num_hidden_layer and len(fc_dim) > 1:
       raise AssertionError('Number of hidden layer should be either 1'
                            +' or number of hidden layers').with_traceback(sys.exc_info()[2])
     elif len(fc_dim) == 1:
-      self.fc_dim = [embedding_len*max_len]+fc_dim*num_hidden_layer+[num_class]
+      # self.fc_dim = [embedding_len*doc_len]+fc_dim*num_hidden_layer+[num_class]
+      self.fc_dim = [embedding_len]+fc_dim*num_hidden_layer+[num_class]
     else:
-      self.fc_dim = [embedding_len*max_len]+fc_dim+[num_class]
+      # self.fc_dim = [embedding_len*doc_len]+fc_dim+[num_class]
+      self.fc_dim = [embedding_len]+fc_dim+[num_class]
     if len(activation_fn) < self.num_hidden_layer and len(activation_fn) > 1:
       raise AssertionError('Number of activation function should be either 1'
                            +' or number of layers').with_traceback(sys.exc_info()[2])
@@ -49,7 +50,7 @@ class NeuralNet(T.nn.Module):
     self.Embedding = T.nn.Embedding(self.num_vocab, self.embedding_len, padding_idx=0)
     # Dense
     self.Fc = []
-    self.Dropout = [T.nn.Dropout(self.drop_rate)]
+    self.Dropout = []
     for i in range(len(self.fc_dim) - 1):
       if i > 0 and i + 1 < len(self.fc_dim):
         self.Dropout.append(T.nn.Dropout(self.drop_rate))
@@ -72,11 +73,12 @@ class NeuralNet(T.nn.Module):
                                    lr=self.lr, momentum=0., nesterov=False)
   def forward(self, inputs):
     output = self.Embedding(inputs)
-    batch_size = output.size()[0]
-    output = output.view([batch_size, -1])
+    # batch_size = output.size()[0]
+    # output = output.view([batch_size, -1])
+    output = output.mean(dim=1)
     for i in range(len(self.fc_dim) - 1):
       if i > 0 and i + 1 < len(self.fc_dim):
-          self.Dropout[i-1](output)
+        output = self.Dropout[i-1](output)
       output = self.Fc[i](output)
       if i < len(self.activation_fn):
         output = self.activation_fn[i](output)

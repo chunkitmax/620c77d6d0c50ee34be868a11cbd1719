@@ -17,11 +17,12 @@ from torch.utils.data import DataLoader
 from dataset import Dataset
 from log import Logger
 from neuralnet import NeuralNet
+from convnet import ConvNet
 
 
 class Train:
   def __init__(self, train_BOW=True, max_epoch=5000, target_file='hw3_dataset.zip', batch_size=50,
-               embedding_len=100, use_cuda=False, use_tensorboard=False,
+               embedding_len=300, use_cuda=False, use_tensorboard=False,
                early_stopping_history_len=100, verbose=1):
     self.logger = Logger(verbose_level=verbose)
     self.train_BOW = train_BOW
@@ -44,22 +45,24 @@ class Train:
         vocab_size, max_len, num_class = self._get_data_loader()
         tmp_net = NeuralNet(self.embedding_len, vocab_size, num_class,
                             max_len, num_hidden_layer[i], drop_rate[i],
-                            fc_dim=[hidden_size[i]], lr=lr[i], momentum=0.,
+                            fc_dim=[hidden_size[i]], lr=lr[i], momentum=.9,
                             use_cuda=self.use_cuda)
         self._train(tmp_net, train_data_loader, valid_data_loader, 'BOW_'+str(i))
     else:
-      lr = [0.01, 0.001, 0.0001]
+      lr = [0.1, 0.01, 0.001]
+      ngrams = [1, 2, 3]
       drop_rate = [0.1, 0.3, 0.5]
-      hidden_size = [128, 256, 512]
-      num_hidden_layer = [1, 2, 3]
+      num_filter = [3, 4, 5]
+      stride = [1, 1, 2]
       for i in range(3):
-        train_data_loader, valid_data_loader,\
+        train_data_loader, valid_data_loader, \
         vocab_size, max_len, num_class = self._get_data_loader()
-        tmp_net = NeuralNet(self.embedding_len, vocab_size, num_class,
-                            max_len, num_hidden_layer[i], drop_rate[i],
-                            fc_dim=[hidden_size[i]], lr=lr[i], momentum=0.,
-                            use_cuda=self.use_cuda)
-        self._train(tmp_net, train_data_loader, valid_data_loader, 'BOW_'+str(i))
+        tmp_net = ConvNet(self.embedding_len, vocab_size, num_class,
+                          max_len, drop_rate=drop_rate[i], ngrams=ngrams[i],
+                          num_filter=num_filter[i], stride=stride[i],
+                          use_bn=True, lr=lr[i], momentum=.9,
+                          use_cuda=self.use_cuda)
+        self._train(tmp_net, train_data_loader, valid_data_loader, 'CNN_'+str(i))
   def _get_data_loader(self, train_valid_ratio=.2):
     zf = ZipFile(self.target_file, 'r')
     data = zf.read('train.csv').decode('utf-8').strip().split('\n')[1:]
@@ -136,7 +139,7 @@ class Train:
         self.logger.d(' -- val_loss: %.4f, prec: %.4f, rec: %.4f, fscr: %.4f'%
                       (mean_val_loss, valid_prec/(valid_step+1),
                        valid_recall/(valid_step+1), mean_fscore),
-                       reset_cursor=False)
+                      reset_cursor=False)
         if self.use_tensorboard:
           self.writer.add_scalar('train_loss', mean_loss, epoch_index)
           self.writer.add_scalar('train_acc', acc / counter, epoch_index)
