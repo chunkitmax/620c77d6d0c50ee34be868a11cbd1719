@@ -123,8 +123,10 @@ class Train:
             data = data.cuda()
             label = label.cuda()
           output, predicted = net(data)
-          prec, recall, fscore, _ = precision_recall_fscore_support(label, output,
-                                                                    average='weighted')
+          prec, recall, \
+          fscore, _ = precision_recall_fscore_support(label.data.tolist(),
+                                                      predicted.data.tolist(),
+                                                      average='weighted')
           valid_prec += prec
           valid_recall += recall
           valid_fscore += fscore
