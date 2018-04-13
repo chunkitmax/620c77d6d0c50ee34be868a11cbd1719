@@ -50,36 +50,36 @@ class Train:
                             max_len, num_hidden_layer[nhl_i], drop_rate[dr_i],
                             fc_dim=[hidden_size[hs_i]], lr=lr[lr_i], momentum=.9,
                             use_cuda=self.use_cuda)
-        loss = self._train(tmp_net, train_data_loader, valid_data_loader,
-                           'BOW_%d_%d_%d_%d'%(lr_i, dr_i, hidden_size[hs_i],
-                                              num_hidden_layer[nhl_i]))
+        b_fscore = self._train(tmp_net, train_data_loader, valid_data_loader,
+                               'BOW_%d_%d_%d_%d'%(lr_i, dr_i, hidden_size[hs_i],
+                                                  num_hidden_layer[nhl_i]))
         del train_data_loader, valid_data_loader, tmp_net
-        return loss
-      prev_loss = 999.
+        return b_fscore
+      prev_fscore = 999.
       prev_i, prev_j = -1, -1
       # Grid search
       # seach for optimal num_hidden_layer and hidden_size
       for j in range(3):
         for i in range(3):
-          loss = train_net(0, 0, i, j)
-          if loss >= prev_loss:
+          fscore = train_net(0, 0, i, j)
+          if fscore <= prev_fscore:
             break
-          prev_loss = loss
+          prev_fscore = fscore
           prev_i, prev_j = i, j
       # search for optimal lr
       prev_k = 0
       for k in range(2, 0, -1):
-        loss = train_net(k, 0, prev_i, prev_j)
-        if loss > prev_loss:
+        fscore = train_net(k, 0, prev_i, prev_j)
+        if fscore <= prev_fscore:
           break
-        prev_loss = loss
+        prev_fscore = fscore
         prev_k = k
       # search for optimal drop rate
       for l in range(2, 0, -1):
-        loss = train_net(prev_k, l, prev_i, prev_j)
-        if loss > prev_loss:
+        fscore = train_net(prev_k, l, prev_i, prev_j)
+        if fscore <= prev_fscore:
           break
-        prev_loss = loss
+        prev_fscore = fscore
     else:
       lr = [0.1, 0.01, 0.001]
       ngrams = [1, 2, 3]
@@ -198,7 +198,7 @@ class Train:
     if self.use_tensorboard:
       self.writer.close()
     self.logger.i('Finish', True)
-    return best_val_loss
+    return max_fscore
   def _save(self, global_step, net, loss_history, best_fscore, identity):
     T.save({
         'epoch': global_step+1,
