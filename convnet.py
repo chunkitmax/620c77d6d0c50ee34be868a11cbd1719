@@ -50,10 +50,10 @@ class ConvNet(T.nn.Module):
       tmp_CNN.apply(init_weight)
       self.CNN.append(tmp_CNN)
       self.LeakyReLU.append(T.nn.LeakyReLU())
-      self.MaxPool.append(T.nn.MaxPool2d((self.doc_len-i, i+1)))
-      self.DropOut.append(T.nn.Dropout2d(self.drop_rate))
+      self.MaxPool.append(T.nn.MaxPool2d((self.doc_len-i, 1)))
       if self.use_bn:
         self.BatchNorm.append(T.nn.BatchNorm2d(self.num_filter[i]))
+      self.DropOut.append(T.nn.Dropout2d(self.drop_rate))
       flatten_size += self.kernel_size[i]*self.num_filter[i]
     # Dense
     self.Fc = T.nn.Linear(flatten_size, self.num_class)
@@ -78,13 +78,14 @@ class ConvNet(T.nn.Module):
     CNN_output = []
     for i in range(len(self.kernel_size)):
       tmp_output = self.MaxPool[i](self.LeakyReLU[i](self.CNN[i](embeddings)))
-      tmp_output = self.DropOut[i](tmp_output)
       if self.use_bn:
         tmp_output = self.BatchNorm[i](tmp_output)
+      tmp_output = self.DropOut[i](tmp_output)
       CNN_output.append(tmp_output)
     concat = T.cat(CNN_output, 1).view([batch_size, -1])
     output = self.Fc(concat)
-    return output, T.max(output, dim=1)
+    _, max_indice = T.max(output, dim=1)
+    return output, max_indice
   def get_loss_fn(self):
     return self.Loss_fn
   def get_optimizer(self):

@@ -81,32 +81,34 @@ class Train:
           break
         prev_fscore = fscore
     else:
-      def train_net(lr_i, dr_i, hs_i, nhl_i):
-        train_data_loader, valid_data_loader,\
-        vocab_size, max_len, num_class = self._get_data_loader()
-        tmp_net = NeuralNet(self.embedding_len, vocab_size, num_class,
-                            max_len, num_hidden_layer[nhl_i], drop_rate[dr_i],
-                            fc_dim=[hidden_size[hs_i]], lr=lr[lr_i], momentum=.9,
-                            use_cuda=self.use_cuda)
-        b_fscore = self._train(tmp_net, train_data_loader, valid_data_loader,
-                               'BOW_%d_%d_%d_%d'%(lr_i, dr_i, hidden_size[hs_i],
-                                                  num_hidden_layer[nhl_i]))
-        del train_data_loader, valid_data_loader, tmp_net
-        return b_fscore
       lr = [0.1, 0.01, 0.001]
       ngrams = [1, 2, 3]
       drop_rate = [0.1, 0.3, 0.5]
       num_filter = [3, 4, 5]
       stride = [1, 1, 2]
-      for i in range(3):
-        train_data_loader, valid_data_loader, \
+      def train_net(lr_i, ng_i, dr_i, nf_i, s_i):
+        train_data_loader, valid_data_loader,\
         vocab_size, max_len, num_class = self._get_data_loader()
         tmp_net = ConvNet(self.embedding_len, vocab_size, num_class,
-                          max_len, drop_rate=drop_rate[i], ngrams=ngrams[i],
-                          num_filter=num_filter[i], stride=stride[i],
-                          use_bn=True, lr=lr[i], momentum=.9,
+                          max_len, drop_rate=drop_rate[dr_i], ngrams=ngrams[ng_i],
+                          num_filter=num_filter[nf_i], stride=stride[s_i],
+                          use_bn=False, lr=lr[lr_i], momentum=.9,
                           use_cuda=self.use_cuda)
-        self._train(tmp_net, train_data_loader, valid_data_loader, 'CNN_'+str(i))
+        b_fscore = self._train(tmp_net, train_data_loader, valid_data_loader,
+                               'BOW_%d_%d_%d_%d_%d'%(lr_i, dr_i, ngrams[ng_i], num_filter[nf_i],
+                                                     stride[s_i]))
+        del train_data_loader, valid_data_loader, tmp_net
+        return b_fscore
+      train_net(0, 1, 0, 0, 0)
+      # for i in range(3):
+      #   train_data_loader, valid_data_loader, \
+      #   vocab_size, max_len, num_class = self._get_data_loader()
+      #   tmp_net = ConvNet(self.embedding_len, vocab_size, num_class,
+      #                     max_len, drop_rate=drop_rate[i], ngrams=ngrams[i],
+      #                     num_filter=num_filter[i], stride=stride[i],
+      #                     use_bn=True, lr=lr[i], momentum=.9,
+      #                     use_cuda=self.use_cuda)
+      #   self._train(tmp_net, train_data_loader, valid_data_loader, 'CNN_'+str(i))
   def _get_data_loader(self, train_valid_ratio=.2):
     zf = ZipFile(self.target_file, 'r')
     data = zf.read('train.csv').decode('utf-8').strip().split('\n')[1:]
