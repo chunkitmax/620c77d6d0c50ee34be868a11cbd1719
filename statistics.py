@@ -22,8 +22,10 @@ if __name__ == '__main__':
   print('Number of words: %d'%(sum(dataset.word_counter.values())))
   print('Number of unique words: %d(w/ min freq) %d(w/o min freq)'
         %(len(dataset.word_list), len(dataset.word_counter)))
-  print('Coverage of your limited vocabulary: %.2f%%'
-        %(sum([x for x in dataset.word_counter.values() if x<3])/len(dataset.word_counter)*100.))
+  unk_rate = sum([x for x in dataset.word_counter.values() if x < 3])/ \
+             len(dataset.word_counter)*100.
+  print('Coverage of your limited vocabulary: %.2f%%, UNK token rate: %.2f%%'
+        %(100.-unk_rate, unk_rate))
   print('Top 10 most frequent words: ', dataset.word_counter.most_common(10))
   sentence_len = [len(line) for line in dataset.data]
   print('Maximum sentence length: %d'%(np.max(sentence_len)))

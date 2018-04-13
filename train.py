@@ -23,8 +23,8 @@ from neuralnet import NeuralNet
 class Train:
   def __init__(self, train_BOW=True, max_epoch=5000, target_file='hw3_dataset.zip',
                batch_size=100, embedding_len=300, use_cuda=False,
-               use_tensorboard=False, early_stopping_history_len=100, 
-               early_stopping_allowance = 5, verbose=1, save_best_model=False):
+               use_tensorboard=False, early_stopping_history_len=100,
+               early_stopping_allowance=5, verbose=1, save_best_model=False):
     self.logger = Logger(verbose_level=verbose)
     self.train_BOW = train_BOW
     self.max_epoch = max_epoch
@@ -43,14 +43,43 @@ class Train:
       drop_rate = [0.1, 0.3, 0.5]
       hidden_size = [128, 256, 512]
       num_hidden_layer = [1, 2, 3]
-      for i in range(3):
+      def train_net(lr_i, dr_i, hs_i, nhl_i):
         train_data_loader, valid_data_loader,\
         vocab_size, max_len, num_class = self._get_data_loader()
         tmp_net = NeuralNet(self.embedding_len, vocab_size, num_class,
-                            max_len, num_hidden_layer[i], drop_rate[i],
-                            fc_dim=[hidden_size[i]], lr=lr[i], momentum=.9,
+                            max_len, num_hidden_layer[nhl_i], drop_rate[dr_i],
+                            fc_dim=[hidden_size[hs_i]], lr=lr[lr_i], momentum=.9,
                             use_cuda=self.use_cuda)
-        self._train(tmp_net, train_data_loader, valid_data_loader, 'BOW_'+str(i))
+        loss = self._train(tmp_net, train_data_loader, valid_data_loader,
+                           'BOW_%d_%d_%d_%d'%(lr[lr_i], drop_rate[dr_i], hidden_size[hs_i],
+                                              num_hidden_layer[nhl_i]))
+        del train_data_loader, valid_data_loader, tmp_net
+        return loss
+      prev_loss = 999.
+      prev_i, prev_j = -1, -1
+      # Grid search
+      # seach for optimal num_hidden_layer and hidden_size
+      for j in range(3):
+        for i in range(3):
+          loss = train_net(0, 0, i, j)
+          if loss > prev_loss:
+            break
+          prev_loss = loss
+          prev_i, prev_j = i, j
+      # search for optimal lr
+      prev_k = 0
+      for k in range(2, 0, -1):
+        loss = train_net(k, 0, prev_i, prev_j)
+        if loss > prev_loss:
+          break
+        prev_loss = loss
+        prev_k = k
+      # search for optimal drop rate
+      for l in range(2, 0, -1):
+        loss = train_net(prev_k, l, prev_i, prev_j)
+        if loss > prev_loss:
+          break
+        prev_loss = loss
     else:
       lr = [0.1, 0.01, 0.001]
       ngrams = [1, 2, 3]
@@ -90,6 +119,7 @@ class Train:
       total_batch_per_epoch = len(train_data_loader)
       loss_history = deque(maxlen=self.early_stopping_history_len)
       max_fscore = 0.
+      best_val_loss = 999.
       early_stopping_violate_counter = 0
       epoch_index = 0
       for epoch_index in range(self.max_epoch):
@@ -160,19 +190,22 @@ class Train:
         if self.save_best_model and mean_fscore > max_fscore:
           self._save(epoch_index, net, loss_history, mean_fscore, identity)
           max_fscore = mean_fscore
+        if mean_val_loss < best_val_loss:
+          best_val_loss = mean_val_loss
         self.logger.d('', True, False)
     except KeyboardInterrupt:
       self.logger.i('\n\nInterrupted', True)
     if self.use_tensorboard:
       self.writer.close()
     self.logger.i('Finish', True)
+    return best_val_loss
   def _save(self, global_step, net, loss_history, best_fscore, identity):
     T.save({
-      'epoch': global_step+1,
-      'state_dict': net.state_dict(),
-      'loss_history': loss_history,
-      'best_fscore': best_fscore,
-      'optimizer': net.optimizer.state_dict()
+        'epoch': global_step+1,
+        'state_dict': net.state_dict(),
+        'loss_history': loss_history,
+        'best_fscore': best_fscore,
+        'optimizer': net.optimizer.state_dict()
     }, identity+'_best')
 
 if __name__ == '__main__':
