@@ -61,8 +61,7 @@ class Train:
       # seach for optimal num_hidden_layer and hidden_size
       for j in range(3):
         for i in range(3):
-          # loss = train_net(0, 0, i, j)
-          loss = 2.
+          loss = train_net(0, 0, i, j)
           if loss >= prev_loss:
             break
           prev_loss = loss
