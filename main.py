@@ -31,7 +31,7 @@ def main():
   elif Args.ConvNet:
     mode = False
   if mode is not None:
-    trainer = Train(train_BOW=True, max_epoch=Args.max_epoch, embedding_len=Args.emb_len,
+    trainer = Train(train_BOW=mode, max_epoch=Args.max_epoch, embedding_len=Args.emb_len,
                     early_stopping_history_len=Args.early_stop_history, use_cuda=Args.gpu,
                     use_tensorboard=Args.tensorboard, verbose=Args.verbose,
                     early_stopping_allowance=Args.early_stop_allowance, save_best_model=Args.save)

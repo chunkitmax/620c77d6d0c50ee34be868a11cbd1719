@@ -51,7 +51,7 @@ class Train:
                             fc_dim=[hidden_size[hs_i]], lr=lr[lr_i], momentum=.9,
                             use_cuda=self.use_cuda)
         loss = self._train(tmp_net, train_data_loader, valid_data_loader,
-                           'BOW_%d_%d_%d_%d'%(lr[lr_i], drop_rate[dr_i], hidden_size[hs_i],
+                           'BOW_%d_%d_%d_%d'%(lr_i, dr_i, hidden_size[hs_i],
                                               num_hidden_layer[nhl_i]))
         del train_data_loader, valid_data_loader, tmp_net
         return loss
@@ -61,8 +61,9 @@ class Train:
       # seach for optimal num_hidden_layer and hidden_size
       for j in range(3):
         for i in range(3):
-          loss = train_net(0, 0, i, j)
-          if loss > prev_loss:
+          # loss = train_net(0, 0, i, j)
+          loss = 2.
+          if loss >= prev_loss:
             break
           prev_loss = loss
           prev_i, prev_j = i, j
