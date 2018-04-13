@@ -55,7 +55,7 @@ class Train:
                                                   num_hidden_layer[nhl_i]))
         del train_data_loader, valid_data_loader, tmp_net
         return b_fscore
-      prev_fscore = 999.
+      prev_fscore = 0.
       prev_i, prev_j = -1, -1
       # Grid search
       # seach for optimal num_hidden_layer and hidden_size
@@ -81,6 +81,18 @@ class Train:
           break
         prev_fscore = fscore
     else:
+      def train_net(lr_i, dr_i, hs_i, nhl_i):
+        train_data_loader, valid_data_loader,\
+        vocab_size, max_len, num_class = self._get_data_loader()
+        tmp_net = NeuralNet(self.embedding_len, vocab_size, num_class,
+                            max_len, num_hidden_layer[nhl_i], drop_rate[dr_i],
+                            fc_dim=[hidden_size[hs_i]], lr=lr[lr_i], momentum=.9,
+                            use_cuda=self.use_cuda)
+        b_fscore = self._train(tmp_net, train_data_loader, valid_data_loader,
+                               'BOW_%d_%d_%d_%d'%(lr_i, dr_i, hidden_size[hs_i],
+                                                  num_hidden_layer[nhl_i]))
+        del train_data_loader, valid_data_loader, tmp_net
+        return b_fscore
       lr = [0.1, 0.01, 0.001]
       ngrams = [1, 2, 3]
       drop_rate = [0.1, 0.3, 0.5]
