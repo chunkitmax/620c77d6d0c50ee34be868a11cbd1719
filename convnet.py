@@ -82,7 +82,7 @@ class ConvNet(T.nn.Module):
       ngram_output.append(tmp_output)
     concat = T.cat(ngram_output, 1).view([batch_size, -1])
     output = self.Fc(concat)
-    return output, T.max(output)
+    return output, T.max(output, dim=1)
   def get_loss_fn(self):
     return self.Loss_fn
   def get_optimizer(self):
