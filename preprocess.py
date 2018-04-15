@@ -9,6 +9,7 @@ def _clean_str(string):
   '''
   Remove noise from input string
   '''
+  string = re.sub(r'@[a-z0-9A-Z_]+', ' ', string)
   string = re.sub(r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}'
                   +r'\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)', '<url>', string)
   string = re.sub(r'&[a-zA-Z];', ' ', string)

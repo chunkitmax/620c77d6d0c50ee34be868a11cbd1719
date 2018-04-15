@@ -9,6 +9,7 @@ import sys
 from collections import Counter
 from zipfile import ZipFile
 
+import numpy as np
 import torch as T
 import torch.utils.data as Data
 from sklearn.model_selection import train_test_split
@@ -32,7 +33,7 @@ class Dataset(Data.Dataset):
       Log = Logger()
       Log.i('Start loading dataset...')
 
-      # load lists if saved previously
+      # Load lists if saved previously
       has_lists = Path.exists('sentiment_list') and Path.exists('word_list')
       if has_lists:
         Log.d('Sentiment and word list found!')
@@ -59,7 +60,7 @@ class Dataset(Data.Dataset):
                                                   random_state=0)
       data_len = len(raw_data)
       valid_data_len = len(valid_raw_data)
-      # add data and label to array
+      # Add data and label to array
       for index, line in enumerate(raw_data):
         cols = line.split(',', 3)
         if do_cleaning:
@@ -67,7 +68,7 @@ class Dataset(Data.Dataset):
         else:
           words = cols[3].strip('"').split()
         self.max_len = max(self.max_len, len(words))
-        # tweet_id and authour ignore?
+        # Tweet_id and authour ignore?
         if not has_lists:
           sentiments.add(cols[1])
           self.label.append([cols[1]])
@@ -87,7 +88,7 @@ class Dataset(Data.Dataset):
         else:
           words = cols[3].strip('"').split()
         self.max_len = max(self.max_len, len(words))
-        # tweet_id and authour ignore?
+        # Tweet_id and authour ignore?
         if not has_lists:
           self.valid_label.append([cols[1]])
           self.valid_data.append(words)
@@ -103,11 +104,11 @@ class Dataset(Data.Dataset):
       Log.i('Start preprocessing...')
 
       if not has_lists:
-        # denoise by setting minimum freq
+        # Denoise by setting minimum freq
         self.word_list = ['<pad>', '<unk>'] + \
                          [key for key, value in self.word_counter.items() if value >= 3]
 
-        # save sentiment and word list
+        # Save sentiment and word list
         self.sentiments = list(sentiments)
         if len(self.sentiments) > 0 and len(self.word_list) > 0:
           with open('sentiment_list', 'w+') as sf:
@@ -120,11 +121,11 @@ class Dataset(Data.Dataset):
           raise AssertionError('either sentiment and word list is empty') \
                 .with_traceback(sys.exc_info()[2])
 
-        # convert to dict for fast searching
+        # Convert to dict for fast searching
         self.sentiments = {word: index for index, word in enumerate(self.sentiments)}
         self.word_list = {word: index for index, word in enumerate(self.word_list)}
 
-        # convert text to index
+        # Convert text to index
         for index, [data_ent, label_ent] in enumerate(zip(self.data, self.label)):
           # <unk> (index 0) if word not found
           self.data[index] = [self.word_list[word] if word in self.word_list
@@ -132,7 +133,7 @@ class Dataset(Data.Dataset):
                               for word in data_ent]
           self.label[index] = [self.sentiments[word] for word in label_ent]
 
-        # convert text to index
+        # Convert text to index
         for index, [data_ent, label_ent] in enumerate(zip(self.valid_data, self.valid_label)):
           # <unk> (index 0) if word not found
           self.valid_data[index] = [self.word_list[word] if word in self.word_list
@@ -140,6 +141,9 @@ class Dataset(Data.Dataset):
                                     for word in data_ent]
           self.valid_label[index] = [self.sentiments[word] for word in label_ent]
 
+      data_len_list = [len(line) for line in self.data]
+      self.data_len_mean = np.mean(data_len_list)
+      self.data_len_std = np.std(data_len_list)
       self.data = [entry+[0]*(self.max_len-len(entry)) for entry in self.data]
       self.valid_data = [entry+[0]*(self.max_len-len(entry)) for entry in self.valid_data]
 
