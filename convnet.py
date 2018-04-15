@@ -56,6 +56,7 @@ class ConvNet(T.nn.Module):
     self.LeakyReLU = []
     self.BatchNorm = []
     self.DropOut = []
+    total_cnn_output = 0
     # Convolution + Pooling
     for i in range(len(self.kernel_size)):
       tmp_CNN = T.nn.Conv2d(self.stride, self.num_filter[i], (self.kernel_size[i], self.embedding_len), bias=False)
@@ -64,11 +65,16 @@ class ConvNet(T.nn.Module):
       self.LeakyReLU.append(T.nn.LeakyReLU())
       if self.pool_initializer is not None:
         self.Pooling.append(self.pool_initializer((self.doc_len-i, 1)))
+      else:
+        total_cnn_output += (self.doc_len-i)*self.num_filter[i]
       if self.use_bn:
         self.BatchNorm.append(T.nn.BatchNorm2d(self.num_filter[i]))
       self.DropOut.append(T.nn.Dropout2d(self.drop_rate))
     # Dense
-    self.Fc = T.nn.Linear(sum(self.num_filter), self.num_class)
+    if self.pool_initializer is not None:
+      self.Fc = T.nn.Linear(sum(self.num_filter), self.num_class)
+    else:
+      self.Fc = T.nn.Linear(total_cnn_output, self.num_class)
     # Loss
     self.Loss_fn = T.nn.CrossEntropyLoss()
     # GPU support
